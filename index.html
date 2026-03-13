@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>HOA THAN ULTIMATE - LV 100,000</title>
+    <style>
+        @keyframes rainbow {
+            0% { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; }
+            33% { border-color: #00ff00; box-shadow: 0 0 15px #00ff00; }
+            66% { border-color: #0000ff; box-shadow: 0 0 15px #0000ff; }
+            100% { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; }
+        }
+        body { background: #000; color: #fff; font-family: 'Consolas', monospace; padding: 20px; }
+        .panel { border: 2px solid; animation: rainbow 3s infinite linear; background: #0a0a0a; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        h1 { text-align: center; animation: rainbow 2s infinite linear; border: none; }
+        
+        .grid { display: grid; grid-template-columns: 380px 1fr; gap: 20px; }
+        textarea, input { width: 100%; background: #000; border: 1px solid #333; color: #00ff41; padding: 10px; margin-bottom: 10px; box-sizing: border-box; outline: none; }
+        
+        button { width: 100%; padding: 15px; background: transparent; border: 2px solid; animation: rainbow 2s infinite linear; color: #fff; cursor: pointer; font-weight: bold; text-transform: uppercase; }
+        button:hover { background: #fff; color: #000; }
+
+        /* Table Style */
+        table { width: 100%; border-collapse: collapse; background: #050505; }
+        th, td { border: 1px solid #222; padding: 12px; text-align: left; }
+        th { color: #888; font-size: 0.8em; }
+        .status-running { color: #00ff41; font-weight: bold; text-shadow: 0 0 5px #00ff41; }
+        .btn-stop { background: #ff0000; color: #fff; border: none; padding: 5px 10px; cursor: pointer; font-size: 0.7em; animation: none; width: auto; }
+    </style>
+</head>
+<body>
+    <h1>PROJECT: HÓA THẦN LV 100,000</h1>
+
+    <div class="grid">
+        <div class="panel">
+            <h3>CẤU HÌNH TREO</h3>
+            <textarea id="tokens" rows="6" placeholder="Nhập List Tokens (Mỗi dòng 1 cái)"></textarea>
+            <textarea id="messages" rows="4" placeholder="Danh sách câu ngôn..."></textarea>
+            <input type="text" id="channelId" placeholder="ID Channel Discord">
+            <input type="number" id="delay" value="5" title="Delay (giây)">
+            <button onclick="deploy()">KÍCH HOẠT HÓA THẦN</button>
+        </div>
+
+        <div class="panel">
+            <h3>QUẢN LÝ TASK (TASK MANAGER)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>TOKEN</th>
+                        <th>ĐÃ GỬI</th>
+                        <th>TRẠNG THÁI</th>
+                        <th>HÀNH ĐỘNG</th>
+                    </tr>
+                </thead>
+                <tbody id="taskTable">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let runningWorkers = {};
+
+        function deploy() {
+            const tokens = document.getElementById('tokens').value.split('\n').filter(t => t.trim());
+            const messages = document.getElementById('messages').value.split('\n').filter(m => m.trim());
+            const channelId = document.getElementById('channelId').value;
+            const delay = parseInt(document.getElementById('delay').value) * 1000;
+
+            if (!tokens.length || !channelId) return alert("Thiếu dữ liệu!");
+
+            tokens.forEach(token => {
+                token = token.trim();
+                if (runningWorkers[token]) return;
+
+                const worker = new Worker('worker.js');
+                runningWorkers[token] = { instance: worker, sent: 0, status: 'RUNNING' };
+
+                worker.postMessage({ type: 'START', token, channelId, messages, delay });
+
+                worker.onmessage = function(e) {
+                    if (e.data.type === 'SUCCESS') {
+                        runningWorkers[e.data.token].sent++;
+                        renderTable();
+                    }
+                };
+                renderTable();
+            });
+        }
+
+        function stopTask(token) {
+            if (runningWorkers[token]) {
+                runningWorkers[token].instance.terminate();
+                delete runningWorkers[token];
+                renderTable();
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('taskTable');
+            tbody.innerHTML = '';
+            for (let token in runningWorkers) {
+                const task = runningWorkers[token];
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-size: 0.7em; color: #888;">${token.substring(0,20)}...</td>
+                        <td>${task.sent}</td>
+                        <td class="status-running">ACTIVE</td>
+                        <td><button class="btn-stop" onclick="stopTask('${token}')">STOP</button></td>
+                    </tr>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
