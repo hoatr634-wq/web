@@ -1,0 +1,617 @@
+// ==UserScript==
+// @name         FB Auto Report V13.1 - Pink Edition
+// @namespace    http://tampermonkey.net/
+// @version      13.1
+// @description  V13.1: Bản Full Hồng - Tự động báo cáo với 11 loại khác nhau, lặp lại vô hạn.
+// @author       Custom Build
+// @match        https://www.facebook.com/*
+// @grant        none
+// ==/UserScript==
+
+(async () => {
+    'use strict';
+
+    // ==========================================
+    // CẤU HÌNH CƠ BẢN & XPATH CHUẨN
+    // ==========================================
+    const INPUT_XPATH = "//*[@aria-label=\"Facebook Page name or URL\"]";
+
+    // XPath bắn tỉa vào class 'xdj266r'
+    const XP_SUBMIT = "//div[contains(@class, 'xdj266r')]//span[contains(text(), 'Submit') or contains(text(), 'Gửi')]";
+    const XP_DONE   = "//div[contains(@class, 'xdj266r')]//span[contains(text(), 'Done') or contains(text(), 'Xong') or contains(text(), 'Hoàn tất')]";
+    const XP_NEXT   = "//div[contains(@class, 'xdj266r')]//span[contains(text(), 'Next') or contains(text(), 'Tiếp')]";
+
+    // ==========================================
+    // DANH SÁCH CÁC CỤM BÁO CÁO (11 loại)
+    // ==========================================
+    const reportTypes = [
+        { // Loại 1: Violent - Seems like terrorism
+            name: "Violent - Terrorism",
+            steps: [
+                { step: 1, name: "Menu (3 chấm)", xpath: "//*[@aria-label=\"Profile settings see more options\"]" },
+                { step: 2, name: "Report profile", xpath: "//SPAN[contains(text(), \"Report profile\")]" },
+                { step: 3, name: "Something about this profile", xpath: "//SPAN[contains(text(), \"Something about this profile\")]" },
+                { step: 4, name: "Violent, hateful content", xpath: "//SPAN[contains(text(), \"Violent, hateful or disturbing content\")]" },
+                { step: 5, name: "Seems like terrorism", xpath: "//SPAN[contains(text(), \"Seems like terrorism\")]" },
+                { step: 6, name: "Submit", xpath: XP_SUBMIT },
+                { step: 7, name: "Next", xpath: XP_NEXT },
+                { step: 8, name: "Done", xpath: XP_DONE }
+            ]
+        },
+        { // Loại 2: Violent - Calling for violence
+            name: "Violent - Calling for violence",
+            steps: [
+                { step: 1, name: "Menu (3 chấm)", xpath: "//*[@aria-label=\"Profile settings see more options\"]" },
+                { step: 2, name: "Report profile", xpath: "//SPAN[contains(text(), \"Report profile\")]" },
+                { step: 3, name: "Something about this profile", xpath: "//SPAN[contains(text(), \"Something about this profile\")]" },
+                { step: 4, name: "Violent, hateful content", xpath: "//SPAN[contains(text(), \"Violent, hateful or disturbing content\")]" },
+                { step: 5, name: "Calling for violence", xpath: "//SPAN[contains(text(), \"Calling for violence\")]" },
+                { step: 6, name: "Submit", xpath: XP_SUBMIT },
+                { step: 7, name: "Next", xpath: XP_NEXT },
+                { step: 8, name: "Done", xpath: XP_DONE }
+            ]
+        },
+        { // Loại 3: Violent - Organized crime
+            name: "Violent - Organized crime",
+            steps: [
+                { step: 1, name: "Menu (3 chấm)", xpath: "//*[@aria-label=\"Profile settings see more options\"]" },
+                { step: 2, name: "Report profile", xpath: "//SPAN[contains(text(), \"Report profile\")]" },
+                { step: 3, name: "Something about this profile", xpath: "//SPAN[contains(text(), \"Something about this profile\")]" },
+                { step: 4, name: "Violent, hateful content", xpath: "//SPAN[contains(text(), \"Violent, hateful or disturbing content\")]" },
+                { step: 5, name: "Seems like organized crime", xpath: "//SPAN[contains(text(), \"Seems like organized crime\")]" },
+                { step: 6, name: "Submit", xpath: XP_SUBMIT },
+                { step: 7, name: "Next", xpath: XP_NEXT },
+                { step: 8, name: "Done", xpath: XP_DONE }
+            ]
+        },
+        { // Loại 4: Suicide - Eating disorder
+            name: "Suicide - Eating disorder",
+            steps: [
+                { step: 1, name: "Menu (3 chấm)", xpath: "//*[@aria-label=\"Profile settings see more options\"]" },
+                { step: 2, name: "Report profile", xpath: "//SPAN[contains(text(), \"Report profile\")]" },
+                { step: 3, name: "Something about this profile", xpath: "//SPAN[contains(text(), \"Something about this profile\")]" },
+                { step: 4, name: "Suicide or self-harm", xpath: "//SPAN[contains(text(), \"Suicide or self-harm\")]" },
+                { step: 5, name: "Eating disorder", xpath: "//SPAN[contains(text(), \"Eating disorder\")]" },
+                { step: 6, name: "Submit", xpath: XP_SUBMIT },
+                { step: 7, name: "Next", xpath: XP_NEXT },
+                { step: 8, name: "Done", xpath: XP_DONE }
+            ]
+        },
+        { // Loại 5: Scam - Fraud or scam
+            name: "Scam - Fraud or scam",
+            steps: [
+                { step: 1, name: "Menu (3 chấm)", xpath: "//*[@aria-label=\"Profile settings see more options\"]" },
+                { step: 2, name: "Report profile", xpath: "//SPAN[contains(text(), \"Report profile\")]" },
+                { step: 3, name: "Something about this profile", xpath: "//SPAN[contains(text(), \"Something about this profile\")]" },
+                { step: 4, name: "Scam, fraud", xpath: "//SPAN[contains(text(), \"Scam, fraud or false information\")]" },
+                { step: 5, name: "Fraud or scam", xpath: "//SPAN[contains(text(), \"Fraud or scam\")]" },
+                { step: 6, name: "Submit", xpath: XP_SUBMIT },
+                { step: 7, name: "Next", xpath: XP_NEXT },
+                { step: 8, name: "Done", xpath: XP_DONE }
+            ]
+        },
+        { // Loại 6: Scam - Spam
+            name: "Scam - Spam",
+            steps: [
+                { step: 1, name: "Menu (3 chấm)", xpath: "//*[@aria-label=\"Profile settings see more options\"]" },
+                { step: 2, name: "Report profile", xpath: "//SPAN[contains(text(), \"Report profile\")]" },
+                { step: 3, name: "Something about this profile", xpath: "//SPAN[contains(text(), \"Something about this profile\")]" },
+                { step: 4, name: "Scam, fraud", xpath: "//SPAN[contains(text(), \"Scam, fraud or false information\")]" },
+                { step: 5, name: "Spam", xpath: "//SPAN[contains(text(), \"Spam\")]" },
+                { step: 6, name: "Next", xpath: XP_NEXT },
+                { step: 7, name: "Done", xpath: XP_DONE }
+            ]
+        },
+        { // Loại 7: Fake - Me
+            name: "Fake - Me",
+            steps: [
+                { step: 1, name: "Menu (3 chấm)", xpath: "//*[@aria-label=\"Profile settings see more options\"]" },
+                { step: 2, name: "Report profile", xpath: "//SPAN[contains(text(), \"Report profile\")]" },
+                { step: 3, name: "Something about this profile", xpath: "//SPAN[contains(text(), \"Something about this profile\")]" },
+                { step: 4, name: "Fake profile", xpath: "//SPAN[contains(text(), \"Fake profile\")]" },
+                { step: 5, name: "Me", xpath: "//SPAN[contains(text(), \"Me\")]" },
+                { step: 6, name: "Send", xpath: "//SPAN[contains(text(), 'Send') or contains(text(), 'Gửi') or contains(text(), 'Tiếp')]" },
+                { step: 7, name: "Done", xpath: XP_DONE }
+            ]
+        },
+        { // Loại 8: Fake - Not a real person
+            name: "Fake - Not a real person",
+            steps: [
+                { step: 1, name: "Menu (3 chấm)", xpath: "//*[@aria-label=\"Profile settings see more options\"]" },
+                { step: 2, name: "Report profile", xpath: "//SPAN[contains(text(), \"Report profile\")]" },
+                { step: 3, name: "Something about this profile", xpath: "//SPAN[contains(text(), \"Something about this profile\")]" },
+                { step: 4, name: "Fake profile", xpath: "//SPAN[contains(text(), \"Fake profile\")]" },
+                { step: 5, name: "They're not a real person", xpath: "//SPAN[contains(text(), \"They're not a real person\")]" },
+                { step: 6, name: "Submit", xpath: XP_SUBMIT },
+                { step: 7, name: "Next", xpath: XP_NEXT },
+                { step: 8, name: "Done", xpath: XP_DONE }
+            ]
+        },
+        { // Loại 9: Something else
+            name: "Something else",
+            steps: [
+                { step: 1, name: "Menu (3 chấm)", xpath: "//*[@aria-label=\"Profile settings see more options\"]" },
+                { step: 2, name: "Report profile", xpath: "//SPAN[contains(text(), \"Report profile\")]" },
+                { step: 3, name: "Something about this profile", xpath: "//SPAN[contains(text(), \"Something about this profile\")]" },
+                { step: 4, name: "Something else", xpath: "//SPAN[contains(text(), \"Something else\")]" },
+                { step: 5, name: "Done", xpath: XP_DONE }
+            ]
+        },
+        { // Loại 10: Bullying - Harassment
+            name: "Bullying - Harassment",
+            steps: [
+                { step: 1, name: "Menu (3 chấm)", xpath: "//*[@aria-label=\"Profile settings see more options\"]" },
+                { step: 2, name: "Report profile", xpath: "//SPAN[contains(text(), \"Report profile\")]" },
+                { step: 3, name: "Something about this profile", xpath: "//SPAN[contains(text(), \"Something about this profile\")]" },
+                { step: 4, name: "Bullying, harassment", xpath: "//SPAN[contains(text(), \"Bullying, harassment or abuse\")]" },
+                { step: 5, name: "Bullying or harassment", xpath: "//SPAN[contains(text(), \"Bullying or harassment\")]" },
+                { step: 6, name: "Submit", xpath: XP_SUBMIT },
+                { step: 7, name: "Done", xpath: XP_DONE }
+            ]
+        },
+        { // Loại 11: Adult - Prostitution
+            name: "Adult - Prostitution",
+            steps: [
+                { step: 1, name: "Menu (3 chấm)", xpath: "//*[@aria-label=\"Profile settings see more options\"]" },
+                { step: 2, name: "Report profile", xpath: "//SPAN[contains(text(), \"Report profile\")]" },
+                { step: 3, name: "Something about this profile", xpath: "//SPAN[contains(text(), \"Something about this profile\")]" },
+                { step: 4, name: "Adult content", xpath: "//SPAN[contains(text(), \"Adult content\")]" },
+                { step: 5, name: "Seems like prostitution", xpath: "//SPAN[contains(text(), \"Seems like prostitution\")]" },
+                { step: 6, name: "Submit", xpath: XP_SUBMIT },
+                { step: 7, name: "Next", xpath: XP_NEXT },
+                { step: 8, name: "Done", xpath: XP_DONE }
+            ]
+        }
+    ];
+
+    // ==========================================
+    // CẤU HÌNH THỜI GIAN
+    // ==========================================
+    const DELAY_TIME = 1000;
+    const INPUT_DELAY = 1000;
+
+    // ==========================================
+    // CORE ENGINE
+    // ==========================================
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    let currentReportIndex = 0;
+    let totalReportsDone = 0;
+
+    function getElementByXpath(path) {
+        if (!path) return null;
+        return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    }
+
+    function safeClick(element) {
+        if (!element) return;
+        let blocker = element.closest('[aria-hidden="true"]');
+        if (blocker) blocker.removeAttribute('aria-hidden');
+        element.scrollIntoView({block: "center", inline: "center"});
+        const opts = { bubbles: true, cancelable: true, view: window };
+        element.dispatchEvent(new MouseEvent('mousedown', opts));
+        element.dispatchEvent(new MouseEvent('mouseup', opts));
+        element.dispatchEvent(new MouseEvent('click', opts));
+    }
+
+    async function waitForElementToDisappear(element) {
+        let maxWait = 50;
+        while (maxWait > 0) {
+            if (!element.isConnected || element.offsetParent === null) {
+                return true;
+            }
+            await sleep(100);
+            maxWait--;
+        }
+        return false;
+    }
+
+    async function waitForGlobalLoading(statusCallback) {
+        let maxWait = 100;
+        let isWaiting = false;
+
+        while (maxWait > 0) {
+            let loadingIcon = document.querySelector('[role="progressbar"], img[src*="loading"], i[class*="loading"], div[class*="spinner"]');
+            
+            if (loadingIcon && loadingIcon.offsetParent !== null) {
+                isWaiting = true;
+                if(statusCallback) statusCallback("⏳ Đang đợi loading...", "#FF69B4");
+                await sleep(100);
+                maxWait--;
+            } else {
+                if(isWaiting) await sleep(500); 
+                return;
+            }
+        }
+    }
+
+    function findButtonFromV20_3(keywords) {
+        let all = [...document.querySelectorAll('div[role="menuitem"], div[role="button"], button, span, div[role="dialog"] span, div[aria-label], div[tabindex="0"]')];
+        all = all.filter(el => el.offsetParent !== null && el.offsetWidth > 0);
+        for (let el of all) {
+            let txt = (el.innerText || "").trim();
+            let label = (el.getAttribute("aria-label") || "").trim();
+            for (let k of keywords) {
+                if (txt === k || label === k || txt.includes(k) || label.includes(k)) {
+                    let parentBtn = el.closest('div[role="button"], button, div[role="menuitem"], div[tabindex="0"]');
+                    return parentBtn ? parentBtn : el;
+                }
+            }
+        }
+        return null;
+    }
+
+    // ==========================================
+    // ANTI-SLEEP LOGIC
+    // ==========================================
+    let audioLoop = null;
+    let titleInterval = null;
+    const SILENT_AUDIO = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////////////////////////////////////wAAADFMYXZjNTguMzUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUAIAAAAASAA8AxAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAATGF2YzU4LjM1LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAATGF2YzU4LjM1LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAATGF2YzU4LjM1LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAATGF2YzU4LjM1LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAATGF2YzU4LjM1LjEwMAAAAAAAAAAAAAAA';
+
+    function toggleAntiSleep(enable) {
+        if (enable) {
+            if (!audioLoop) {
+                audioLoop = new Audio(SILENT_AUDIO);
+                audioLoop.loop = true;
+                audioLoop.volume = 0.01;
+            }
+            audioLoop.play().catch(e => console.log("Cần tương tác để phát nhạc ngầm"));
+            let tick = false;
+            if (titleInterval) clearInterval(titleInterval);
+            titleInterval = setInterval(() => {
+                document.title = tick ? `🌸 ĐÃ BÁO CÁO: ${totalReportsDone} LẦN` : `🎀 FB Auto Report - ${totalReportsDone}`;
+                tick = !tick;
+            }, 2000);
+        } else {
+            if (audioLoop) audioLoop.pause();
+            if (titleInterval) {
+                clearInterval(titleInterval);
+                document.title = "Facebook";
+            }
+        }
+    }
+
+    // ==========================================
+    // EXECUTE SINGLE REPORT
+    // ==========================================
+    async function executeReport(reportConfig, statusCallback, progressCallback) {
+        const steps = reportConfig.steps;
+        
+        for (let i = 0; i < steps.length; i++) {
+            if (shouldStop) return false;
+            while (isPaused) { await sleep(500); if (shouldStop) return false; }
+
+            let step = steps[i];
+            let stepNum = step.step;
+            let totalSteps = steps.length;
+            
+            statusCallback(`[${reportConfig.name}] Bước ${stepNum}/${totalSteps}: ${step.name}`, "#FFB6C1");
+            if (progressCallback) progressCallback((stepNum / totalSteps) * 100);
+
+            let el = null;
+            
+            for(let retry=0; retry<10; retry++){
+                if (shouldStop) break;
+                
+                if (step.xpath) {
+                    el = getElementByXpath(step.xpath);
+                }
+                
+                if (!el) {
+                    if (step.name === "Next") {
+                        el = findButtonFromV20_3(["Next", "Tiếp", "Tiếp tục"]);
+                    } else if (step.name === "Submit") {
+                        el = findButtonFromV20_3(["Submit", "Gửi", "Send"]);
+                    } else if (step.name === "Done") {
+                        el = findButtonFromV20_3(["Done", "Xong", "Hoàn tất", "Đóng", "Close"]);
+                    } else if (step.name === "Send") {
+                        el = findButtonFromV20_3(["Send", "Gửi", "Tiếp"]);
+                    } else if (step.name === "Me") {
+                        el = findButtonFromV20_3(["Me", "Tôi"]);
+                        if(!el) el = getElementByXpath("//span[text()='Me']");
+                        if(!el) el = getElementByXpath("//span[contains(text(),'Me')]");
+                    } else if (step.name === "They're not a real person") {
+                        el = findButtonFromV20_3(["They're not a real person", "Không phải người thật"]);
+                        if(!el) el = getElementByXpath("//span[contains(text(),\"They're not a real person\")]");
+                    } else if (step.name === "Bullying or harassment") {
+                        el = findButtonFromV20_3(["Bullying or harassment", "Quấy rối"]);
+                    } else {
+                        el = findButtonFromV20_3([step.name]);
+                    }
+                }
+                
+                if(el) break;
+                await sleep(800);
+            }
+
+            if (shouldStop) return false;
+
+            if (el) {
+                if (step.inputData) {
+                    el.style.border = "2px solid #FF69B4";
+                    simulateInput(el, step.inputData);
+                    statusCallback("Chờ load list...", "#FF69B4");
+                    await sleep(INPUT_DELAY);
+                } else {
+                    el.style.border = "2px solid #FF1493";
+                    safeClick(el);
+                    
+                    if (step.name === "Next" || step.name === "Submit") {
+                        statusCallback("Đợi nút ẩn...", "#FFB6C1");
+                        await waitForElementToDisappear(el);
+                    }
+                    
+                    await waitForGlobalLoading(statusCallback);
+                    
+                    statusCallback("Nghỉ 1s...", "#FF69B4");
+                    await sleep(DELAY_TIME);
+                }
+            } else {
+                console.error(`❌ LỖI: Không tìm thấy nút "${step.name}"`);
+                statusCallback(`LỖI: Mất nút '${step.name}'`, "#FF1493");
+            }
+        }
+        
+        totalReportsDone++;
+        return true;
+    }
+
+    function simulateInput(element, text) {
+        element.focus();
+        let lastValue = element.value;
+        element.value = text;
+        let event = new Event('input', { bubbles: true });
+        let tracker = element._valueTracker;
+        if (tracker) { tracker.setValue(lastValue); }
+        element.dispatchEvent(event);
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // ==========================================
+    // UI CONTROL - FULL PINK THEME
+    // ==========================================
+    let isPaused = false;
+    let shouldStop = false;
+    let isMini = false;
+    let isRunning = false;
+
+    const panel = document.createElement("div");
+    const fullStyle = {
+        position: "fixed", top: "50px", left: "10px", width: "280px",
+        background: "linear-gradient(135deg, #1a0b1a 0%, #2d1a2d 100%)", 
+        color: "#FFB6C1", 
+        padding: "15px",
+        borderRadius: "15px", 
+        zIndex: 999999, 
+        border: "2px solid #FF69B4",
+        fontFamily: "monospace", 
+        fontSize: "12px", 
+        boxShadow: "0 0 20px rgba(255,105,180,0.6)",
+        transition: "all 0.3s ease",
+        backdropFilter: "blur(5px)"
+    };
+    Object.assign(panel.style, fullStyle);
+
+    const renderPanel = () => {
+        if (isMini) {
+            panel.innerHTML = `
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <span style="font-size:16px;">🌸</span>
+                    <div style="flex:1; background:#3a1a3a; height:8px; border-radius:4px; overflow:hidden;">
+                        <div id="miniBar" style="width:0%; height:100%; background:#FF69B4;"></div>
+                    </div>
+                    <button id="btnExpand" style="background:none; border:1px solid #FF69B4; color:#FF69B4; cursor:pointer; border-radius:5px;">[+]</button>
+                </div>
+                <div id="miniStt" style="font-size:10px; color:#FFB6C1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;">Đang chạy...</div>
+                <div id="miniCount" style="font-size:9px; color:#FF99CC; margin-top:2px;">Đã báo cáo: ${totalReportsDone}</div>
+            `;
+            panel.style.width = "200px";
+            panel.style.padding = "5px";
+            panel.style.background = "linear-gradient(135deg, #1a0b1a 0%, #2d1a2d 100%)";
+            
+            const bar = panel.querySelector("#miniBar");
+            const stt = panel.querySelector("#miniStt");
+            const btnExpand = panel.querySelector("#btnExpand");
+            btnExpand.onclick = () => { isMini = false; renderPanel(); };
+            return { bar, stt, count: panel.querySelector("#miniCount") };
+        } else {
+            panel.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3 style="margin:0; color:#FF69B4;">🌸 FB Auto Report V13.1 🌸</h3>
+                    <button id="btnMinimize" style="background:none; border:1px solid #FF69B4; color:#FF69B4; cursor:pointer; border-radius:5px; padding:2px 8px;">[-]</button>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <div>Loại báo cáo hiện tại: <span id="currentReportType" style="color:#FF99CC;">Chưa chạy</span></div>
+                    <div>Tổng số lần đã báo cáo: <span id="totalReports" style="color:#FFB6C1;">0</span></div>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <input type="checkbox" id="chkAntiSleep" checked style="accent-color:#FF69B4;"> 
+                    <label for="chkAntiSleep" style="cursor:pointer; color:#FF99CC; font-weight:bold;">🎀 Chống ngủ Tab</label>
+                </div>
+                <div style="margin-bottom:10px;">Trạng thái: <span id="stt" style="color:#FFB6C1;">Sẵn sàng</span></div>
+                <div style="background:#3a1a3a; height:10px; border-radius:10px; overflow:hidden; margin-bottom:10px;">
+                    <div id="progressBar" style="width:0%; height:100%; background:linear-gradient(90deg, #FF69B4, #FF1493); transition: width 0.3s;"></div>
+                </div>
+                <div style="display:flex; gap:5px;">
+                    <button id="btnStart" style="flex:1; padding:8px; background:#8B1A4A; color:white; border:1px solid #FF69B4; font-weight:bold; cursor:pointer; border-radius:8px;">🌸 CHẠY VÔ HẠN</button>
+                    <button id="btnPause" style="flex:1; padding:8px; background:#B85C8A; color:white; border:1px solid #FF99CC; font-weight:bold; cursor:pointer; border-radius:8px; display:none;">⏸️ TẠM DỪNG</button>
+                    <button id="btnStop" style="flex:1; padding:8px; background:#8B0045; color:white; border:1px solid #FF1493; font-weight:bold; cursor:pointer; border-radius:8px; display:none;">⏹️ DỪNG</button>
+                </div>
+                <div id="btnResume" style="display:none; text-align:center; margin-top:5px;">
+                    <button style="width:100%; padding:5px; background:#4B2A4B; color:#FFB6C1; border:1px solid #FF69B4; font-weight:bold; cursor:pointer; border-radius:8px;">▶️ TIẾP TỤC</button>
+                </div>
+            `;
+            Object.assign(panel.style, fullStyle);
+            const btnMinimize = panel.querySelector("#btnMinimize");
+            btnMinimize.onclick = () => { isMini = true; renderPanel(); };
+            bindMainEvents();
+            return {
+                stt: panel.querySelector("#stt"),
+                bar: panel.querySelector("#progressBar"),
+                currentType: panel.querySelector("#currentReportType"),
+                totalSpan: panel.querySelector("#totalReports")
+            };
+        }
+    };
+    
+    document.body.appendChild(panel);
+    let uiRefs = { stt: null, bar: null, currentType: null, totalSpan: null };
+
+    function bindMainEvents() {
+        if(isMini) return;
+        const btnStart = panel.querySelector("#btnStart");
+        const btnPause = panel.querySelector("#btnPause");
+        const btnStop = panel.querySelector("#btnStop");
+        const btnResumeDiv = panel.querySelector("#btnResume");
+        const btnResume = btnResumeDiv.querySelector("button");
+        const chkAntiSleep = panel.querySelector("#chkAntiSleep");
+
+        if (btnStart) btnStart.onclick = startProcess;
+        if (btnPause) btnPause.onclick = () => { isPaused = true; updateUIState(); };
+        if (btnResume) btnResume.onclick = () => { isPaused = false; updateUIState(); };
+        if (btnStop) btnStop.onclick = () => { 
+            if(confirm("🌸 DỪNG hoàn toàn?")) { 
+                shouldStop = true; 
+                isPaused = false; 
+                isRunning = false;
+                toggleAntiSleep(false);
+                updateStatus("Đã dừng!", "#FF69B4");
+            } 
+        };
+    }
+
+    function updateUIState() {
+        if(isMini) return;
+        const btnStart = panel.querySelector("#btnStart");
+        const btnPause = panel.querySelector("#btnPause");
+        const btnStop = panel.querySelector("#btnStop");
+        const btnResumeDiv = panel.querySelector("#btnResume");
+        if (!btnStart) return;
+        if (isRunning) { 
+            btnStart.style.display = "none";
+            btnStop.style.display = "block";
+            if (isPaused) {
+                btnPause.style.display = "none";
+                btnResumeDiv.style.display = "block";
+            } else {
+                btnPause.style.display = "block";
+                btnResumeDiv.style.display = "none";
+            }
+        } else { 
+            btnStart.style.display = "block";
+            btnPause.style.display = "none";
+            btnStop.style.display = "none";
+            btnResumeDiv.style.display = "none";
+        }
+    }
+
+    function updateStatus(text, color = "#FFB6C1") {
+        if (isMini) {
+            const el = panel.querySelector("#miniStt");
+            if (el) { el.innerText = text; el.style.color = color; }
+        } else {
+            const el = panel.querySelector("#stt");
+            if (el) { el.innerText = text; el.style.color = color; }
+        }
+    }
+    
+    function updateProgress(percent) {
+        if (isMini) {
+            const el = panel.querySelector("#miniBar");
+            if (el) el.style.width = percent + "%";
+        } else {
+            const el = panel.querySelector("#progressBar");
+            if (el) el.style.width = percent + "%";
+        }
+    }
+
+    function updateTotalDisplay() {
+        if (isMini) {
+            const el = panel.querySelector("#miniCount");
+            if (el) el.innerText = `Đã báo cáo: ${totalReportsDone}`;
+        } else {
+            const el = panel.querySelector("#totalReports");
+            if (el) el.innerText = totalReportsDone;
+        }
+    }
+
+    function updateCurrentType(typeName) {
+        if (!isMini && uiRefs.currentType) {
+            uiRefs.currentType.innerText = typeName;
+        }
+    }
+
+    // ==========================================
+    // MAIN PROCESS (INFINITE LOOP)
+    // ==========================================
+    async function startProcess() {
+        let useAntiSleep = true;
+        if (!isMini) {
+            useAntiSleep = panel.querySelector("#chkAntiSleep").checked;
+        }
+
+        shouldStop = false;
+        isPaused = false;
+        isRunning = true;
+        currentReportIndex = 0;
+
+        if (useAntiSleep) toggleAntiSleep(true);
+        updateUIState();
+        
+        updateStatus("🚀 BẮT ĐẦU BÁO CÁO VÔ HẠN!", "#FF69B4");
+        
+        let loopCount = 0;
+
+        while (!shouldStop) {
+            loopCount++;
+            
+            for (let i = 0; i < reportTypes.length; i++) {
+                if (shouldStop) break;
+                
+                currentReportIndex = i;
+                const report = reportTypes[i];
+                
+                updateCurrentType(report.name);
+                updateStatus(`📋 [Vòng ${loopCount}] Đang báo cáo: ${report.name}`, "#FFB6C1");
+                updateTotalDisplay();
+                
+                const success = await executeReport(report, updateStatus, updateProgress);
+                
+                if (!success && !shouldStop) {
+                    updateStatus(`⚠️ Lỗi khi báo cáo ${report.name}, tiếp tục...`, "#FF99CC");
+                    await sleep(3000);
+                }
+                
+                if (!shouldStop) {
+                    await sleep(1500);
+                }
+            }
+            
+            if (!shouldStop) {
+                updateStatus(`✅ Hoàn thành vòng ${loopCount}! Bắt đầu vòng mới...`, "#FF69B4");
+                updateTotalDisplay();
+                await sleep(2000);
+            }
+        }
+
+        isRunning = false;
+        toggleAntiSleep(false);
+        updateUIState();
+        
+        if (!shouldStop) {
+            updateStatus(`✨ ĐÃ DỪNG! Tổng số lần báo cáo: ${totalReportsDone}`, "#FF69B4");
+            updateProgress(100);
+        }
+    }
+
+    // Khởi tạo UI
+    const initUI = () => {
+        const refs = renderPanel();
+        if (!isMini) {
+            uiRefs = refs;
+            updateTotalDisplay();
+        }
+        bindMainEvents();
+    };
+    
+    initUI();
+})();
